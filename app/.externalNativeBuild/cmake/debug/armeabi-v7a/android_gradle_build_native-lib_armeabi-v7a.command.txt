@@ -1,0 +1,8 @@
+Executable : /Users/heshufan/Library/Android/sdk/cmake/3.10.2.4988404/bin/cmake
+arguments : 
+--build
+/Users/heshufan/openingCode/FFmpeg/app/.externalNativeBuild/cmake/debug/armeabi-v7a
+--target
+native-lib
+jvmArgs : 
+
