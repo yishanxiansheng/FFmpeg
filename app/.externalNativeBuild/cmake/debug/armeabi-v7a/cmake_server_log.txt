@@ -61,6 +61,22 @@ CMAKE SERVER:
 
 CMAKE SERVER: [== "CMake Server" ==[
 
+CMAKE SERVER: {"cookie":"","inReplyTo":"configure","message":"CMake Warning at CMakeLists.txt:17 (message):\n  JNI_LIBS_DIR = /Users/heshufan/openingCode/FFmpeg/app/src/main/cpp/jniLibs\n\n","title":"Warning","type":"message"}
+
+CMAKE SERVER: ]== "CMake Server" ==]
+
+CMAKE SERVER: CMake Warning at CMakeLists.txt:17 (message):
+  JNI_LIBS_DIR = /Users/heshufan/openingCode/FFmpeg/app/src/main/cpp/jniLibs
+
+
+CMAKE SERVER: CMake Warning at CMakeLists.txt:17 (message):
+  JNI_LIBS_DIR = /Users/heshufan/openingCode/FFmpeg/app/src/main/cpp/jniLibs
+
+
+CMAKE SERVER: 
+
+CMAKE SERVER: [== "CMake Server" ==[
+
 CMAKE SERVER: {"cookie":"","inReplyTo":"configure","progressCurrent":1000,"progressMaximum":1000,"progressMessage":"Configuring","progressMinimum":0,"type":"progress"}
 
 CMAKE SERVER: ]== "CMake Server" ==]

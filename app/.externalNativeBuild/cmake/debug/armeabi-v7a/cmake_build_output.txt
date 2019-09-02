@@ -1,1 +1,5 @@
+CMake Warning at /Users/heshufan/openingCode/FFmpeg/app/src/main/cpp/CMakeLists.txt:17 (message):
+  JNI_LIBS_DIR = /Users/heshufan/openingCode/FFmpeg/app/src/main/cpp/jniLibs
+
+
 Configuring done
