@@ -14,6 +14,7 @@ add_library(
         native-lib.cpp)
 
 set(JNI_LIBS_DIR ${CMAKE_SOURCE_DIR}/jniLibs)
+message(WARNING "JNI_LIBS_DIR = ${JNI_LIBS_DIR}")
 
 add_library(avcodec
         SHARED
