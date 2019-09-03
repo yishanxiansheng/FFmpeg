@@ -21,7 +21,7 @@ public class HolderCallBack implements SurfaceHolder.Callback {
     /**
      * 小视频宽度
      */
-    private int smallVideoWidth = 2160;
+    private int maxVideoWidth = 2160;
 
     /**
      * 最大帧率
@@ -67,8 +67,13 @@ public class HolderCallBack implements SurfaceHolder.Callback {
         }
         //设置相机的属性：对焦、闪光灯等
         mParameters = mCamera.getParameters();
-        smallVideoWidth = width;
-        maxVideoHeight = height;
+        if (width < height){
+            maxVideoHeight = width;
+            maxVideoWidth = height;
+        }else {
+            maxVideoWidth = width;
+            maxVideoHeight = height;
+        }
         prepareCameraParaments();
         mCamera.setParameters(mParameters);
         try {
@@ -122,7 +127,7 @@ public class HolderCallBack implements SurfaceHolder.Callback {
         mParameters.setPreviewFrameRate(mFrameRate);
 
         //设置浏览尺寸
-        mParameters.setPreviewSize(smallVideoWidth, maxVideoHeight);
+        mParameters.setPreviewSize(maxVideoWidth, maxVideoHeight);
 
         // 设置输出视频流尺寸，采样率
         mParameters.setPreviewFormat(ImageFormat.YV12);
