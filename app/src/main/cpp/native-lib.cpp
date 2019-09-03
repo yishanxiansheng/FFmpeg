@@ -16,7 +16,7 @@ Java_com_noodle_ffmpeg_MainActivity_stringFromJNI(
     return env->NewStringUTF(hello.c_str());
 } extern "C"
 JNIEXPORT void JNICALL
-Java_com_noodle_ffmpeg_MediaManager_cutAudio(JNIEnv *env, jobject instance, jstring srcFile_,
+Java_com_noodle_ffmpeg_FfmpegManager_cutAudio(JNIEnv *env, jobject instance, jstring srcFile_,
                                              jstring desFile_) {
     const char *in_filename = env->GetStringUTFChars(srcFile_, 0);
     const char *out_filename = env->GetStringUTFChars(desFile_, 0);
