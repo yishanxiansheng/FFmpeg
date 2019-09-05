@@ -1,7 +1,0 @@
-[
-{
-  "directory": "/Users/heshufan/openingCode/FFmpeg/app/.externalNativeBuild/cmake/debug/armeabi-v7a",
-  "command": "/Users/heshufan/Library/Android/sdk/ndk-bundle/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=armv7-none-linux-androideabi21 --gcc-toolchain=/Users/heshufan/Library/Android/sdk/ndk-bundle/toolchains/llvm/prebuilt/darwin-x86_64 --sysroot=/Users/heshufan/Library/Android/sdk/ndk-bundle/toolchains/llvm/prebuilt/darwin-x86_64/sysroot  -Dnative_lib_EXPORTS -I/Users/heshufan/openingCode/FFmpeg/app/src/main/cpp/jniLibs/include  -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -march=armv7-a -mthumb -Wa,--noexecstack -Wformat -Werror=format-security  -frtti -fexceptions -Wno-deprecated-declarations -O0 -fno-limit-debug-info  -fPIC   -o CMakeFiles/native-lib.dir/native-lib.cpp.o -c /Users/heshufan/openingCode/FFmpeg/app/src/main/cpp/native-lib.cpp",
-  "file": "/Users/heshufan/openingCode/FFmpeg/app/src/main/cpp/native-lib.cpp"
-}
-]

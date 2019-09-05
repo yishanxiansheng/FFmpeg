@@ -15,22 +15,28 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
+import com.noodle.ffmpeg.camera.MediaObject;
+import com.noodle.ffmpeg.camera.callback.OnPrepareCallback;
+import com.noodle.ffmpeg.util.CacheFileUtil;
+
+import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Timer;
 
-public class MainActivity extends AppCompatActivity {
-
-    static {
-        System.loadLibrary("native-lib");
-    }
-
+public class MainActivity extends AppCompatActivity implements View.OnClickListener,OnPrepareCallback{
+    private static final String TAG = "MainActivity.class";
     private SurfaceView mSurfaceView;
     private SurfaceHolder mSurfaceHolder;
     private HolderCallBack mHolderCallBack;
+    private Button mStartBtn;
+    private MediaObject mMediaObject;
+    public CameraStatus mCameraStatus = CameraStatus.START;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,7 +44,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         hideStatusAndNavigation();
         initView();
-
 
         //FfmpegManager mediaManager = new FfmpegManager();
         //mediaManager.cutAudio(Environment.getExternalStorageDirectory()+"/water.mp4",Environment.getExternalStorageDirectory()+"/water2.mp4");
@@ -60,27 +65,77 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initView() {
-        TextView tv = findViewById(R.id.sample_text);
-        tv.setText(stringFromJNI());
+        mStartBtn = findViewById(R.id.start_record);
+        mStartBtn.setOnClickListener(this);
         mSurfaceView = findViewById(R.id.mSurfaceView);
-        mSurfaceHolder = mSurfaceView.getHolder();
-        // 为了兼容Honeycomb之前版本的设备。
-        mSurfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
-        mHolderCallBack = new HolderCallBack();
-        mSurfaceHolder.addCallback(mHolderCallBack);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        mHolderCallBack.openCamera();
+        initCacheFile();
+        initMediaRecord();
     }
 
     @Override
     public void onPause() {
         super.onPause();
         mHolderCallBack.releaseCamera();
+        mCameraStatus = CameraStatus.FINISH;
     }
 
-    public native String stringFromJNI();
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()) {
+            case R.id.start_record:
+                if (mCameraStatus == CameraStatus.READY){
+                    mCameraStatus= CameraStatus.RECORDING;
+                    startRecord();
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    /**
+     * 开始录制
+     */
+    private void startRecord() {
+        MediaObject.MediaPart part = mHolderCallBack.startRecord();
+    }
+
+    /**
+     * 初始化音视频录制
+     */
+    private void initMediaRecord(){
+        mSurfaceHolder = mSurfaceView.getHolder();
+        // 为了兼容Honeycomb之前版本的设备。
+        mSurfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+        mHolderCallBack = new HolderCallBack();
+        mSurfaceHolder.addCallback(mHolderCallBack);
+        mHolderCallBack.setPrepareCallback(this);
+        if (mCameraStatus == CameraStatus.START){
+            mHolderCallBack.openCamera();
+        }
+
+        String key = String.valueOf(System.currentTimeMillis());
+        mMediaObject = mHolderCallBack.setOutputDirectory(key,
+                CacheFileUtil.getCacheFilePath() + key);
+    }
+
+    /**
+     * 初始化存视频的文件夹
+     */
+    private void initCacheFile(){
+        //多媒体文件
+        File dcim = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
+        CacheFileUtil.setCacheFilePath(dcim + "/yishanxiansheng/");
+    }
+
+    @Override
+    public void onPrepared() {
+        Log.d(TAG,"Camera prepared");
+        mCameraStatus = CameraStatus.READY;
+    }
 }

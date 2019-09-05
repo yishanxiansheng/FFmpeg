@@ -5,6 +5,12 @@ import android.hardware.Camera;
 import android.os.Build;
 import android.view.SurfaceHolder;
 
+import com.noodle.ffmpeg.camera.FFmpegBridge;
+import com.noodle.ffmpeg.camera.MediaObject;
+import com.noodle.ffmpeg.camera.callback.OnPrepareCallback;
+import com.noodle.ffmpeg.util.Log;
+
+import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -13,7 +19,9 @@ import java.util.List;
  * @author heshufan
  * @date 2019-09-03
  */
-public class HolderCallBack implements SurfaceHolder.Callback {
+public class HolderCallBack implements SurfaceHolder.Callback, Camera.PreviewCallback {
+
+    private static final String TAG = "HolderCallBack";
     /**
      * 小视频高度
      */
@@ -22,31 +30,32 @@ public class HolderCallBack implements SurfaceHolder.Callback {
      * 小视频宽度
      */
     private int maxVideoWidth = 2160;
-
     /**
      * 最大帧率
      */
-    private static int MAX_FRAME_RATE = 30;
-
+    private static int MAX_FRAME_RATE = 20;
     /**
      * 帧率
      */
     private int mFrameRate = MAX_FRAME_RATE;
 
+    private int mVideoBitRate = 580000;
     /**
      * 后置摄像头
      */
     private int mCameraId = Camera.CameraInfo.CAMERA_FACING_BACK;
-
     private Camera mCamera;
-
     /**
      * 相机参数
      */
-    protected Camera.Parameters mParameters = null;
+    private Camera.Parameters mParameters = null;
 
-    public HolderCallBack() {
-    }
+    /**
+     * 相机准备好的回调
+     */
+    private OnPrepareCallback mPrepareCallback;
+
+    private MediaObject mMediaObject;
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
@@ -67,22 +76,20 @@ public class HolderCallBack implements SurfaceHolder.Callback {
         }
         //设置相机的属性：对焦、闪光灯等
         mParameters = mCamera.getParameters();
-        if (width < height){
+        if (width < height) {
             maxVideoHeight = width;
             maxVideoWidth = height;
-        }else {
+        } else {
             maxVideoWidth = width;
             maxVideoHeight = height;
         }
         prepareCameraParaments();
         mCamera.setParameters(mParameters);
+        setPreviewCallback();
         try {
+            //开始预览
             mCamera.startPreview();
         } catch (Exception e) {
-            /**
-             * 启动失败时，我们通过异常控制机制释放了相机资源。任何时候，打开相机并完成任务后，必须记得及时释放它，
-             * 即使是在发生异常时。
-             */
             e.printStackTrace();
             mCamera.release();
             mCamera = null;
@@ -125,10 +132,8 @@ public class HolderCallBack implements SurfaceHolder.Callback {
             }
         }
         mParameters.setPreviewFrameRate(mFrameRate);
-
         //设置浏览尺寸
         mParameters.setPreviewSize(maxVideoWidth, maxVideoHeight);
-
         // 设置输出视频流尺寸，采样率
         mParameters.setPreviewFormat(ImageFormat.YV12);
 
@@ -189,12 +194,81 @@ public class HolderCallBack implements SurfaceHolder.Callback {
             mCamera = Camera.open(mCameraId);
         }
         mCamera.setDisplayOrientation(90);
+        if (mPrepareCallback != null) {
+            //通知视频录制准备好了
+            mPrepareCallback.onPrepared();
+        }
+
     }
 
-    public void releaseCamera(){
+    public void releaseCamera() {
         if (mCamera != null) {
             mCamera.release();
             mCamera = null;
         }
+    }
+
+    @Override
+    public void onPreviewFrame(byte[] data, Camera camera) {
+        //获取视频数据
+    }
+
+    private void setPreviewCallback() {
+        Camera.Size size = mParameters.getPreviewSize();
+        if (size != null) {
+            int buffSize = size.width * size.height * 3 / 2;
+            try {
+                //增加预览的缓存
+                mCamera.addCallbackBuffer(new byte[buffSize]);
+                mCamera.addCallbackBuffer(new byte[buffSize]);
+                mCamera.addCallbackBuffer(new byte[buffSize]);
+                mCamera.setPreviewCallbackWithBuffer(this);
+            } catch (OutOfMemoryError e) {
+                Log.e(TAG, "startPreview...setPreviewCallback...", e);
+            }
+            Log.e(TAG, "startPreview...setPreviewCallbackWithBuffer...width:" + size.width + " height:" + size.height);
+        } else {
+            mCamera.setPreviewCallback(this);
+        }
+    }
+
+    /**
+     *
+     */
+    public void setPrepareCallback(OnPrepareCallback mPrepareCallback) {
+        this.mPrepareCallback = mPrepareCallback;
+    }
+
+    /**
+     * 设置视频输出的文件
+     * @param key 时间戳
+     * @param s 视频所在的文件夹
+     */
+    public MediaObject setOutputDirectory(String key, String s) {
+        File file = new File(s);
+        boolean isExit = false;
+        if (!file.exists()){
+            isExit = file.mkdir();
+        }else{
+            file.delete();
+        }
+
+        if (isExit){
+            mMediaObject = new MediaObject(key, s);
+        }
+
+        return mMediaObject;
+    }
+
+    /**
+     * 开始录制
+     * @return 返回的是这次录制的事情片段
+     */
+    public MediaObject.MediaPart startRecord() {
+        //todo 准备ffmpeg的编解码器
+        FFmpegBridge.prepareFFmpegEncoder( mMediaObject.getOutputDirectory(), mMediaObject.getBaseName(),
+                maxVideoHeight, maxVideoWidth, mFrameRate,mVideoBitRate);
+        //todo 打开音频开始录制
+        return null;
     }
 }

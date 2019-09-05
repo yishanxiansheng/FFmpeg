@@ -11,6 +11,7 @@ find_library(
 add_library(
         native-lib
         SHARED
+        encode_h264.cpp
         native-lib.cpp)
 
 set(JNI_LIBS_DIR ${CMAKE_SOURCE_DIR}/jniLibs)
