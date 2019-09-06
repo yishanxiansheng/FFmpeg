@@ -8,21 +8,24 @@
 
 #include "Arguments.h"
 #include "bade_include.h"
-//c为c++的子集，这里定义类似C++的类
+//c为c++的子集，这里定义类似C++的类,将采集的YUV数据编码为H264
 class EncodeH264 {
     //构造函数
 public:
     //构造函数
     EncodeH264(Arguments *args);
+public:
     //析构函数
     ~EncodeH264(){};
+public:
     //初始化编码器
     int initVedioCodec();
+public:
     //开始编码
-    void startEncode();
+    void startEncodeH264();
+public:
     //结束编码
-    void endEncodec();
-
+    void endEncodecH264();
 private:
     Arguments *arguments;
     //全局上下文
@@ -41,6 +44,8 @@ private:
     AVCodec *av_codec;
     //编码器参数
     AVCodecParameters *av_codec_param;
+    //图像像素大小
+    int picture_size;
 };
 
 #endif //FFMPEG_ENCODE_H264_H
