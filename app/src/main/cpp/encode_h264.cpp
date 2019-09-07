@@ -2,6 +2,7 @@
 // Created by 一杉先生 on 2019-09-05.
 //
 
+#include <pthread.h>
 #include "encode_h264.h"
 
 #define TAG "initVedioCodec"
@@ -23,7 +24,7 @@ int EncodeH264::initVedioCodec() {
     //打开输出文件
     ret = avio_open(&av_format_context->pb, out_file, AVIO_FLAG_READ_WRITE);
     if (ret < 0) {
-        LOGE(TAG, "fail to open %s", out_file);
+        LOGE(TAG, "failed to open %s", out_file);
         return -1;
     }
     //创建输出码流的AVStream
@@ -33,7 +34,8 @@ int EncodeH264::initVedioCodec() {
         return -1;
     }
     //查找编码器
-    av_codec = avcodec_find_decoder(av_stream->codecpar->codec_id);
+    av_codec = avcodec_find_decoder(av_format_context->oformat->video_codec);
+
     //创建AVCodecContext并设置参数
     av_codec_context = avcodec_alloc_context3(av_codec);
     av_codec_context->codec_id = AV_CODEC_ID_H264;
@@ -59,13 +61,13 @@ int EncodeH264::initVedioCodec() {
     //将参数复制到avcodec_parameters
     ret = avcodec_parameters_from_context(av_stream->codecpar, av_codec_context);
     if (ret < 0) {
-        LOGE(TAG, "faile to copy parameters to av_codec_context");
+        LOGE(TAG, "failed to copy parameters to av_codec_context");
         return -1;
     }
     //打开编码器
     ret = avcodec_open2(av_codec_context, av_codec, &av_dictionary);
     if (ret < 0) {
-        LOGE(TAG, "fail to open av_codec");
+        LOGE(TAG, "failed to open av_codec");
         return -1;
     }
 
@@ -79,21 +81,102 @@ int EncodeH264::initVedioCodec() {
     ret = av_image_fill_arrays(av_frame->data, av_frame->linesize, buf, av_codec_context->pix_fmt,
                                av_codec_context->width, av_codec_context->height, 1);
     if (ret < 0) {
-        LOGE(TAG, "fail to allocate image source");
+        LOGE(TAG, "failed to allocate image source");
         return -1;
     }
 
     //写文件头
     avformat_write_header(av_format_context, NULL);
     av_new_packet(av_packet, picture_size);
-    return 0;
 
+    //创建一个新的线程
+    pthread_t p_thread;
+    //开启线程 参数依次是：创建的线程id，线程参数，调用的函数，传入的函数参数
+    pthread_create(&p_thread, NULL, EncodeH264::startEncodeH264, this);
+    return 0;
 }
 
-void EncodeH264::startEncodeH264() {
+int EncodeH264::startSendOnFrame(uint8_t *buf) {
+    int in_y_size = arguments->height * arguments->width;
+    uint8_t *new_buf = static_cast<uint8_t *>(malloc(in_y_size * 3 / 2));
+    memcpy(new_buf, buf, in_y_size * 3 / 2);
+    //将数据存入队列
+    frame_queue.push(new_buf);
+    return 0;
+}
 
+
+void *EncodeH264::startEncodeH264(void *obj) {
+
+    EncodeH264 *encode_h264 = static_cast<EncodeH264 *>(obj);
+    while (!encode_h264->is_pause || !encode_h264->frame_queue.empty()) {
+        if (encode_h264->frame_queue.empty()) {
+            continue;
+        }
+        //队列取出数据
+        uint8_t *picture_buf = reinterpret_cast<uint8_t *>(encode_h264->frame_queue.wait_and_pop().get());
+        int y_size = encode_h264->arguments->width * encode_h264->arguments->height;
+        //给AVFrame赋值
+        encode_h264->custom_filter(encode_h264, picture_buf, y_size);
+        //todo?
+        encode_h264->av_frame->pts = encode_h264->frame_count;
+        encode_h264->frame_count++;
+        int got_size = 0;
+
+        //进行编码，将AVFrame转化为AVPacket
+        int ret = avcodec_send_frame(encode_h264->av_codec_context,encode_h264->av_frame);
+        if (ret < 0){
+            LOGE(TAG, "failed to send frame to avcodeccontexr");
+            return nullptr;
+        }
+         ret =avcodec_receive_packet(encode_h264->av_codec_context,encode_h264->av_packet);
+        if (ret < 0){
+            LOGE(TAG, "failed to receive packet");
+        }
+
+
+
+    }
+
+
+    //vcodec_encode_video2()：编码一帧视频。即将AVFrame（存储YUV像素数据）编码为AVPacket
+    //av_write_frame()：将编码后的视频码流写入文件。
+
+
+
+    return nullptr;
 }
 
 void EncodeH264::endEncodecH264() {
 
+}
+
+void EncodeH264::custom_filter(const EncodeH264 *encode_h264, uint8_t *buf, int y_size) {
+
+    int y_height_start_index = 0;
+    int uv_height_start_index = 0;
+    //给Y赋值
+    for (int i = y_height_start_index; i < encode_h264->arguments->height; i++) {
+        for (int j = 0; j < encode_h264->arguments->width; j++) {
+            int index = encode_h264->arguments->width * i + j;
+            uint8_t value = *(buf + index);
+            //将Y值赋值给AVFrame
+            *(encode_h264->av_frame->data[0] +
+              (i - y_height_start_index) * encode_h264->arguments->width + j) = value;
+        }
+    }
+    //给UV赋值
+    for (int i = uv_height_start_index; i < encode_h264->arguments->height / 2; i++) {
+        for (int j = 0; j < encode_h264->arguments->width / 2; j++) {
+
+            int index = encode_h264->arguments->width / 2 * i + j;
+            uint8_t v = *(buf + y_size + index);
+
+            uint8_t u = *(buf + y_size * 5 / 4 + index);
+            *(encode_h264->av_frame->data[2] +
+              ((i-uv_height_start_index) * encode_h264->arguments->width / 2 + j)) = v;
+            *(encode_h264->av_frame->data[1] +
+              ((i-uv_height_start_index) * encode_h264->arguments->width / 2 + j)) = u;
+        }
+    }
 }

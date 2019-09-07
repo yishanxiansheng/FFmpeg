@@ -11,6 +11,7 @@ find_library(
 add_library(
         native-lib
         SHARED
+        threadsafe_queue.cpp
         encode_h264.cpp
         native-lib.cpp)
 

@@ -16,5 +16,6 @@ extern "C" {
 #include <jni.h>
 #include <string>
 #include "mylog.h"
+#include "threadsafe_queue.cpp"
 
 #endif //FFMPEG_BADE_INCLUDE_H
