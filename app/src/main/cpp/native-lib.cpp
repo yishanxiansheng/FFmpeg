@@ -5,6 +5,8 @@
 
 #define VEDIO_FORMAT ".264"
 
+EncodeH264 *encode_h264;
+
 extern "C"
 JNIEXPORT jint JNICALL
 Java_com_noodle_ffmpeg_camera_FFmpegBridge_prepareFFmpegEncoder(JNIEnv *env, jclass type,
@@ -38,4 +40,13 @@ Java_com_noodle_ffmpeg_camera_FFmpegBridge_prepareFFmpegEncoder(JNIEnv *env, jcl
     env->ReleaseStringUTFChars(mediaBasePath_, mediaBasePath);
     env->ReleaseStringUTFChars(mediaName_, mediaName);
     return 1;
+}
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_noodle_ffmpeg_camera_FFmpegBridge_encodeFrame2AAC(JNIEnv *env, jclass type,
+                                                           jbyteArray data_) {
+    jbyte *data = env->GetByteArrayElements(data_, NULL);
+    int i = encode_h264->startSendOnFrame((uint8_t *) data);
+    env->ReleaseByteArrayElements(data_, data, 0);
+    return i;
 }

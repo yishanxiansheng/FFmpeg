@@ -33,11 +33,15 @@ public:
 
 public:
     //结束编码
-    void endEncodecH264();
+    int endEncodecH264();
 
 public:
     //自定义滤镜，将数据拷入到AVFrame中
     void custom_filter(const EncodeH264 *encode_h264,uint8_t *buf,int y_size);
+
+public:
+    //输入的像素数据读取完成后调用此函数。用于输出编码器中剩余的AVPacket
+    int flush_encoder(AVFormatContext *av_format_context,int stream_index);
 
 private:
     Arguments *arguments;
@@ -67,6 +71,7 @@ private:
     threadsafe_queue<uint8_t *> frame_queue;
     //记录视频的帧数
     int frame_count = 0;
+    int frame_cnt = 0;
 };
 
 #endif //FFMPEG_ENCODE_H264_H

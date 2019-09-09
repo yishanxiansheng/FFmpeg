@@ -124,31 +124,82 @@ void *EncodeH264::startEncodeH264(void *obj) {
         int got_size = 0;
 
         //进行编码，将AVFrame转化为AVPacket
-        int ret = avcodec_send_frame(encode_h264->av_codec_context,encode_h264->av_frame);
-        if (ret < 0){
+        int ret = avcodec_send_frame(encode_h264->av_codec_context, encode_h264->av_frame);
+        if (ret < 0) {
             LOGE(TAG, "failed to send frame to avcodeccontexr");
             return nullptr;
         }
-         ret =avcodec_receive_packet(encode_h264->av_codec_context,encode_h264->av_packet);
-        if (ret < 0){
+        ret = avcodec_receive_packet(encode_h264->av_codec_context, encode_h264->av_packet);
+        if (ret < 0) {
             LOGE(TAG, "failed to receive packet");
+            return nullptr;
         }
-
-
-
+        encode_h264->frame_cnt++;
+        encode_h264->av_packet->stream_index = encode_h264->av_stream->index;
+        //av_write_frame()：将编码后的视频码流写入文件。
+        ret = av_write_frame(encode_h264->av_format_context, encode_h264->av_packet);
+        //编码完成释放AVPacket
+        av_packet_unref(encode_h264->av_packet);
+        if (ret < 0) {
+            LOGE(TAG, "failed to write frame");
+            return nullptr;
+        }
+        delete (picture_buf);
+        if (encode_h264->is_pause) {
+            encode_h264->endEncodecH264();
+            delete encode_h264;
+        }
     }
-
-
-    //vcodec_encode_video2()：编码一帧视频。即将AVFrame（存储YUV像素数据）编码为AVPacket
-    //av_write_frame()：将编码后的视频码流写入文件。
-
-
-
     return nullptr;
 }
 
-void EncodeH264::endEncodecH264() {
+int EncodeH264::endEncodecH264() {
+    //Flush Encoder
+    int ret_1 = flush_encoder(av_format_context, 0);
+    if (ret_1 < 0) {
+        LOGE(TAG, "Flushing encoder failed\n");
+        return -1;
+    }
 
+    //写入尾部
+    av_write_trailer(av_format_context);
+
+    //Clean
+    if (av_stream) {
+        av_free(av_frame);
+    }
+    avio_close(av_format_context->pb);
+    avformat_free_context(av_format_context);
+    LOGI(TAG, "视频编码结束");
+    //arguments->handler->setup_video_state(END_STATE);
+    //arguments->handler->try_encode_over(arguments);
+    return 1;
+
+}
+
+int EncodeH264::flush_encoder(AVFormatContext *av_format_context, int stream_index) {
+    int ret;
+    AVPacket enc_pkt;
+    if (!(av_codec->capabilities &
+          AV_CODEC_CAP_DELAY))
+        return 0;
+    while (1) {
+        enc_pkt.data = NULL;
+        enc_pkt.size = 0;
+        av_init_packet(&enc_pkt);
+        avcodec_send_frame(av_codec_context, av_frame);
+        ret = avcodec_receive_packet(av_codec_context, &enc_pkt);
+        av_frame_free(NULL);
+        if (ret < 0) {
+            LOGE(TAG, "failed to receive packet");
+            break;
+        }
+        LOGI(TAG, "_Flush Encoder: Succeed to encode 1 frame video!\tsize:%5d\n", enc_pkt.size);
+        ret = av_write_frame(av_format_context, &enc_pkt);
+        if (ret < 0)
+            break;
+    }
+    return ret;
 }
 
 void EncodeH264::custom_filter(const EncodeH264 *encode_h264, uint8_t *buf, int y_size) {
@@ -171,12 +222,11 @@ void EncodeH264::custom_filter(const EncodeH264 *encode_h264, uint8_t *buf, int 
 
             int index = encode_h264->arguments->width / 2 * i + j;
             uint8_t v = *(buf + y_size + index);
-
             uint8_t u = *(buf + y_size * 5 / 4 + index);
             *(encode_h264->av_frame->data[2] +
-              ((i-uv_height_start_index) * encode_h264->arguments->width / 2 + j)) = v;
+              ((i - uv_height_start_index) * encode_h264->arguments->width / 2 + j)) = v;
             *(encode_h264->av_frame->data[1] +
-              ((i-uv_height_start_index) * encode_h264->arguments->width / 2 + j)) = u;
+              ((i - uv_height_start_index) * encode_h264->arguments->width / 2 + j)) = u;
         }
     }
 }

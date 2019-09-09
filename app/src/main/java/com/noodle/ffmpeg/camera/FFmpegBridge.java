@@ -54,11 +54,11 @@ public class FFmpegBridge {
 //    public static native int encodeFrame2H264(byte[] data);
 //
 //
-//    /**
-//     * 编码一帧音频,暂时只能编码pcm音频
-//     *
-//     */
-//    public static native int encodeFrame2AAC(byte[] data);
+    /**
+     * 编码一帧音频,暂时只能编码pcm音频
+     *
+     */
+    public static native int encodeFrame2AAC(byte[] data);
 //
 //    /**
 //     * 录制结束
